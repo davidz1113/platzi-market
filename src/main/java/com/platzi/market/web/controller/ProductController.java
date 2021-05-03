@@ -2,9 +2,14 @@ package com.platzi.market.web.controller;
 
 import com.platzi.market.domain.Product;
 import com.platzi.market.domain.service.ProductService;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
@@ -16,25 +21,48 @@ public class ProductController {
     @Autowired
     private ProductService productService;
 
-
-    public List<Product> getAll() {
-        return productService.getAll();
+    @GetMapping("")
+    @ApiOperation("Get All Supermarket Products")
+    @ApiResponse(code = 200, message = "Ok")
+    public ResponseEntity getAll() {
+        return new ResponseEntity(productService.getAll(), HttpStatus.OK);
     }
 
-    public Optional<Product> getProduct(long productId) {
-        return productService.getProduct(productId);
+    @GetMapping("/{id}")
+    @ApiOperation("Search a product by id")
+    @ApiResponses({
+            @ApiResponse(code = 200, message = "ok"),
+            @ApiResponse(code = 404, message = "product not found")
+    })
+    public ResponseEntity getProduct(@ApiParam(value = "the id of the product", required = true, example = "7") @PathVariable("id") long productId) {
+        return productService.getProduct(productId)
+                .map(product -> new ResponseEntity(product, HttpStatus.OK))
+                .orElse(new ResponseEntity(HttpStatus.NOT_FOUND));
     }
 
-    public Optional<List<Product>> getByCategory(long categoryId) {
-        return productService.getByCategory(categoryId);
+    @GetMapping("/category/{id}")
+    public ResponseEntity getByCategory(@PathVariable("id") long categoryId) {
+
+        final Optional<List<Product>> products = productService.getByCategory(categoryId);
+        if (products.isPresent() && !products.get().isEmpty()) {
+            return new ResponseEntity(products.get(), HttpStatus.OK);
+        } else {
+            return new ResponseEntity(HttpStatus.NOT_FOUND);
+        }
     }
 
-    public Product save(Product product) {
-        return productService.save(product);
+    @PostMapping("")
+    public ResponseEntity save(@RequestBody Product product) {
+        return new ResponseEntity(productService.save(product), HttpStatus.CREATED);
     }
 
-    public boolean delete(long productId) {
-        return productService.delete(productId);
+    @DeleteMapping("/{id}")
+    public ResponseEntity delete(@PathVariable("id") long productId) {
+        if (productService.delete(productId)) {
+            return new ResponseEntity(HttpStatus.OK);
+        } else {
+            return new ResponseEntity(HttpStatus.NOT_FOUND);
+        }
     }
 
 }
